@@ -1,5 +1,6 @@
 package com.tsystems.javaschool.tasks.subsequence;
 
+
 import javafx.util.Pair;
 
 import java.util.ArrayList;

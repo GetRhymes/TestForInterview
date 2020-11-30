@@ -1,9 +1,9 @@
 package com.tsystems.javaschool.tasks.calculator;
 
-import com.sun.xml.internal.fastinfoset.util.CharArray;
-import jdk.nashorn.internal.runtime.regexp.joni.Regex;
+import javafx.util.Pair;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Tree {
@@ -26,54 +26,96 @@ class Node {
         this.child = new ArrayList<>();
     }
 
-    public String toString() {
-        System.out.println(expression);
-        for (int i = 0; i < child.size(); i++) child.get(i).toString();
-        return expression.toString();
-    }
-
-    public String calculate() {
-        int counter = 0;
-        char[] charArray = expression.toString().toCharArray();
-        StringBuilder numberArray = new StringBuilder();
-        StringBuilder signArray = new StringBuilder();
-        for (int i = 0; i < charArray.length; i++) {
-            if (charArray[i] >= '0' && charArray[i] <= '9') {
-                numberArray.append(charArray[i]);
+    public Double calculate() {
+        List<Double> nums = new LinkedList<>();
+        List<Character> signs = new LinkedList<>();
+        int i = 0;
+        int childCtr = 0;
+        boolean prevWasSign = false;
+        while (i < this.expression.length()) {
+            StringBuilder num = new StringBuilder();
+            if (this.expression.charAt(i) >= '0' && this.expression.charAt(i) <= '9' || this.expression.charAt(i) == '.') {
+                while (i < this.expression.length() && (this.expression.charAt(i) >= '0' && this.expression.charAt(i) <= '9' || this.expression.charAt(i) == '.')) {
+                    num.append(this.expression.charAt(i));
+                    i++;
+                    prevWasSign = false;
+                }
+                nums.add(Double.parseDouble(num.toString())); //add num to nums list
             }
-            if (charArray[i] == '+' || charArray[i] == '-' || charArray[i] == '/' || charArray[i] == '*') {
-                if (i < charArray.length - 2) {
-                    if (charArray[i + 1] == '+' || charArray[i + 1] == '-' || charArray[i + 1] == '/' || charArray[i + 1] == '*') {
-                        numberArray.append(child.get(counter).calculate());
-                        counter++;
+            if (i >= this.expression.length()) {
+                break;
+            }
+            if (this.expression.charAt(i) == '+' || this.expression.charAt(i) == '/' ||
+                    this.expression.charAt(i) == '-' || this.expression.charAt(i) == '*') {
+                if ((prevWasSign || this.expression.length() - 1 == i) && child.size() > 0) {
+                    Double d = child.get(childCtr).calculate();
+                    nums.add(d);
+                    childCtr++;
+                } //if this sign is more then second, should invoke calculate in child number N
+                prevWasSign = true;
+                signs.add(this.expression.charAt(i));
+                i++;
+            }
+        } //parse to calculate
+        if (signs.contains('*') || signs.contains('/')) {
+            while (signs.size() != 0 && (signs.contains('*') || signs.contains('/'))) {
+                Pair<Character, Integer> pair = findHighPriorityOperation(signs);
+                Character sign = pair.getKey();
+                int index = pair.getValue();
+                if (sign == '*' || sign == '/') {
+                    if (sign == '*') {
+                        nums.set(index, nums.get(index) * nums.get(index + 1));
                     }
+                    if (sign == '/') {
+                        if (nums.get(index + 1) == 0) {
+                            throw new ArithmeticException("Dividing by zero");
+                        }
+                        nums.set(index, nums.get(index) / nums.get(index + 1));
+                    }
+                    signs.remove(sign);
+                    if (nums.size() > 0)
+                        nums.remove(index + 1);
                 }
-                if (i == charArray.length - 1) {
-                    numberArray.append(child.get(counter).calculate());
-                    counter++;
-                }
-                signArray.append(charArray[i]);
             }
         }
-
-        List<Integer> indexMultiplication = new ArrayList<>();
-        List<Integer> indexDivision = new ArrayList<>();
-        List<Integer> indexAddition = new ArrayList<>();
-        List<Integer> indexSubtraction = new ArrayList<>();
-        for (int i = 0; i < signArray.toString().toCharArray().length; i++) {
-            if (charArray[i] == '*') indexMultiplication.add(i);
-            if (charArray[i] == '/') indexDivision.add(i);
-            if (charArray[i] == '+') indexAddition.add(i);
-            if (charArray[i] == '-') indexSubtraction.add(i);
+        if (signs.contains('+') || signs.contains('-')) {
+            while (signs.size() != 0) {
+                Pair<Character, Integer> pair = findOperation(signs);
+                Character sign = pair.getKey();
+                int index = pair.getValue();
+                if (sign == '+' || sign == '-') {
+                    if (sign == '+') {
+                        nums.set(index, nums.get(index) + nums.get(index + 1));
+                    }
+                    if (sign == '-') {
+                        nums.set(index, nums.get(index) - nums.get(index + 1));
+                    }
+                    signs.remove(sign);
+                    if (nums.size() > 0)
+                        nums.remove(index + 1);
+                }
+            }
         }
-
-        for (int i = 0; i < indexMultiplication.size(); i++) {
-            int res = (int) numberArray.toString().toCharArray()[indexMultiplication[i]] * (int) numberArray.toString().toCharArray()[i + 1];
-            numberArray.append(res);
-            numberArray.replace(i, i, numberArray.substring(numberArray.length() - 1));
-            numberArray.delete(i + 1, i + 2);
-        }
-
+        return nums.get(0);
     }
+
+    private Pair<Character, Integer> findHighPriorityOperation(List<Character> signs) {
+        for (Character sign : signs) {
+            if (sign == '*' || sign == '/') {
+                return new Pair<>(sign, signs.indexOf(sign));
+            }
+        }
+        throw new IllegalArgumentException();
+    }
+
+    private Pair<Character, Integer> findOperation(List<Character> signs) {
+        for (Character sign : signs) {
+            if (sign == '+' || sign == '-') {
+                return new Pair<>(sign, signs.indexOf(sign));
+            }
+        }
+        throw new IllegalArgumentException();
+    }
+
 }
 

@@ -16,39 +16,50 @@ public class Calculator {
      * @return string value containing result of evaluation or null if statement is invalid
      */
     public String evaluate(String statement) {
+        if (statement == null || statement.isEmpty() || statement.contains(",")) {
+            return null;
+        }
+        Tree newTree = new Tree();
         if (checkBrackets(statement)) {
             char[] charArray = statement.toCharArray();
-            Tree newTree = new Tree();
             int count = 0;
+            boolean wasSign = false;
+            Node currentNode = newTree.root;
             while (count < charArray.length) {
                 if (charArray[count] == '(') {
-                    count = addNewNode(newTree.root, count, charArray);
+                    Node newNode = new Node(currentNode);
+                    currentNode.child.add(newNode);
+                    currentNode = newNode;
+                    count++;
+                } else if (charArray[count] == ')') {
+                    currentNode = currentNode.parent;
+                    count++;
                 } else {
-                    newTree.root.expression.append(charArray[count]);
+                    if (charArray[count] == '+' || charArray[count] == '-' || charArray[count] == '/' || charArray[count] == '*' || charArray[count] == '.') {
+                        if (wasSign)
+                            return null;
+                        wasSign = true;
+                    } else {
+                        wasSign = false;
+                    }
+                    currentNode.expression.append(charArray[count]);
                     count++;
                 }
             }
-            System.out.println(newTree.root);
+        } else {
+            return null;
         }
-        return "";
-    }
+        Double d;
+        try {
 
-    private int addNewNode(Node parent, int i, char[] charArray) {
-        int count = i + 1;
-        Node newNode = new Node(parent);
-        parent.child.add(newNode);
-        while (true) {
-            //System.out.println(charArray[count]);
-            if (charArray[count] == '(') count = addNewNode(newNode, count, charArray);
-            if (charArray[count] == ')') {
-                count++;
-                break;
-            }
-            newNode.expression.append(charArray[count]);
-            if (count == charArray.length) break;
-            count++;
+            d = newTree.root.calculate();
+        } catch (ArithmeticException ex) {
+            return null;
         }
-        return count;
+        if (Math.round(d) - d == 0) {
+            return Long.toString(Math.round(d));
+        } else
+            return Double.toString(d);
     }
 
     private boolean checkBrackets(String str) {
@@ -56,10 +67,13 @@ public class Calculator {
         for (int i = 0; i < str.length(); i++) {
             if (check < 0) return false;
             String symbol = str.substring(i, i + 1);
-            if (symbol.equals("(")) { check++; continue; }
+            if (symbol.equals("(")) {
+                check++;
+                continue;
+            }
             if (symbol.equals(")")) check--;
         }
-        if (check == 0)  return true;
+        if (check == 0) return true;
         else return false;
     }
 
